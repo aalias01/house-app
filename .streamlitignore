@@ -1,0 +1,15 @@
+# Ignore old app.py files in subdirectories to prevent conflicts
+desgin1/app.py*
+design2/app.py*
+design3/Amber_design3/app.py*
+story/app.py*
+
+# Ignore test files
+**/app_test.py
+**/*_test.py
+**/*test*.py
+
+# Ignore cache directories
+**/__pycache__/
+**/.pytest_cache/
+**/.mypy_cache/

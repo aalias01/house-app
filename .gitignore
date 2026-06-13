@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Claude AI
+.claude/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Test files
+**/app_test.py
+**/*_test.py
+**/*test*.py
+
+# Cache
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+.virtual_documents/
+
+# Large data files (if needed, use Git LFS)
+# Uncomment if you want to ignore large shapefiles
+# *.shp
+# *.shx
+# *.dbf
+# *.prj
+

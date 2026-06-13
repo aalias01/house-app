@@ -1,0 +1,23 @@
+# Core dependencies
+streamlit>=1.28.0
+pandas>=2.0.0
+numpy>=1.24.0
+plotly>=5.17.0
+
+# Design 1 specific dependencies (Interactive Map)
+geopandas>=0.14.0
+shapely>=2.0.0
+pyarrow>=14.0.0
+streamlit-plotly-events>=0.0.6
+
+# Design 3 specific dependencies (Price Affordability Finder)
+altair>=5.0.0
+python-dotenv>=1.0.0
+pgeocode>=0.4.0
+
+# Optional: Databricks support (only needed if USE_LOCAL_DATA = False in config_data.py)
+# Uncomment the following lines if you need Databricks connectivity:
+# databricks-sql-connector>=3.0.0
+# databricks-sdk>=0.18.0
+# requests>=2.31.0
+
