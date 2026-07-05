@@ -5,11 +5,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from utils.path_utils import setup_design_path, add_to_path
-
-# Setup trend_comparison path
-design2_path, _ = setup_design_path("trend_comparison")
-add_to_path(design2_path)
+from utils.path_utils import get_housets_csv_path
 
 import streamlit as st
 import pandas as pd
@@ -124,31 +120,19 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-@st.cache_data(show_spinner="Loading required data...", ttl=3600, max_entries=1) 
+@st.cache_data(show_spinner="Loading required data...", ttl=3600, max_entries=1)
 def load_data():
-    # Load House_reduced.csv from trend_comparison directory using absolute path
-    csv_path = design2_path / "House_reduced.csv"
-    
+    csv_path = get_housets_csv_path()
+
+    if not csv_path.exists():
+        st.error(f"Data file not found: {csv_path}")
+        st.info("Ensure data/housets_zip_level.csv is present in the repository.")
+        return pd.DataFrame(), []
+
     try:
         df = pd.read_csv(csv_path)
-    except FileNotFoundError:
-        st.error(f"❌ **File Not Found**: House_reduced.csv not found at {csv_path}")
-        st.info("Please ensure House_reduced.csv exists in the trend_comparison directory.")
-        return pd.DataFrame(), []
     except Exception as e:
-        st.error(f"❌ **Error loading data**: {str(e)}")
-        st.info("Please check that House_reduced.csv is a valid CSV file.")
-        return pd.DataFrame(), []
-    
-    # Check if file is a Git LFS pointer file
-    if df.empty or len(df.columns) == 0 or "version https://git-lfs.github.com/spec/v1" in str(df.columns[0]):
-        st.error("⚠️ House_reduced.csv appears to be a Git LFS pointer file.")
-        st.markdown("""
-        **To fix this issue:**
-        1. Install Git LFS: `git lfs install`
-        2. Pull the actual file: `git lfs pull` or `git lfs checkout House_reduced.csv`
-        3. Or download the actual CSV file from the repository
-        """)
+        st.error(f"Error loading data: {e}")
         return pd.DataFrame(), []
     
     # Normalize column names - handle both formats
@@ -252,7 +236,7 @@ if ratio_agg.empty or len(city_order) == 0:
     st.error("⚠️ **No Data Available**")
     st.info("""
     Please check that:
-    - The data file `House_reduced.csv` exists in the `trend_comparison` directory
+    - The data file `housets_zip_level.csv` exists in the `trend_comparison` directory
     - The file is properly formatted and not corrupted
     - The file contains valid data for the selected time period
     """)

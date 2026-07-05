@@ -14,8 +14,7 @@ from config_data import (
 )
 from config_data import compute_rankings
 
-# Get the absolute path to the map_explorer directory (where this module is located)
-_DESIGN1_DIR = Path(__file__).parent.resolve()
+MAP_EXPLORER_DIR = Path(__file__).parent.resolve()
 
 
 # =========================
@@ -38,9 +37,9 @@ def _resolve_shapefile_path(shp_path: str, zip_path: str, label: str) -> str:
     """
     # Convert relative paths to absolute paths
     if shp_path and not Path(shp_path).is_absolute():
-        shp_path = str(_DESIGN1_DIR / shp_path)
+        shp_path = str(MAP_EXPLORER_DIR / shp_path)
     if zip_path and not Path(zip_path).is_absolute():
-        zip_path = str(_DESIGN1_DIR / zip_path)
+        zip_path = str(MAP_EXPLORER_DIR / zip_path)
     
     # Prefer .shp
     if shp_path and os.path.exists(shp_path):

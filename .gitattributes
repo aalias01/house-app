@@ -1,0 +1,2 @@
+data/housets_zip_level.csv filter=lfs diff=lfs merge=lfs -text
+data/geo/*.zip filter=lfs diff=lfs merge=lfs -text

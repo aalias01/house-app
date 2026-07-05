@@ -1,33 +1,27 @@
-"""
-Utils package for shared utilities across the application.
-"""
-from .path_utils import (
-    get_project_root,
-    setup_design_path,
+"""Utility helpers for the housing affordability dashboard."""
+
+from utils.path_utils import (
     add_to_path,
-    import_from_path,
     clear_module_cache,
-)
-from .error_handling import (
-    show_file_not_found_error,
-    show_directory_not_found_error,
-    show_missing_files_error,
-    show_data_loading_error,
-    show_empty_data_error,
+    get_data_dir,
+    get_geo_dir,
+    get_housets_csv_path,
+    get_metro_aggregates_path,
+    get_metro_boundaries_dir,
+    get_module_path,
+    get_project_root,
+    import_from_path,
 )
 
 __all__ = [
-    # Path utilities
-    "get_project_root",
-    "setup_design_path",
     "add_to_path",
-    "import_from_path",
     "clear_module_cache",
-    # Error handling
-    "show_file_not_found_error",
-    "show_directory_not_found_error",
-    "show_missing_files_error",
-    "show_data_loading_error",
-    "show_empty_data_error",
+    "get_data_dir",
+    "get_geo_dir",
+    "get_housets_csv_path",
+    "get_metro_aggregates_path",
+    "get_metro_boundaries_dir",
+    "get_module_path",
+    "get_project_root",
+    "import_from_path",
 ]
-

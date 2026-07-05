@@ -5,27 +5,27 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from utils.path_utils import setup_design_path, import_from_path, clear_module_cache
+from utils.path_utils import get_module_path, import_from_path, clear_module_cache
 from utils.error_handling import show_directory_not_found_error, show_missing_files_error
 
 # Global error handler - wrap everything to catch all errors silently
 try:
-    # Setup design1 path using shared utility
-    design1_path, project_root = setup_design_path("map_explorer")
+    # Setup map_explorer module path
+    map_module_path, project_root = get_module_path("map_explorer")
     
-    # Check if design1 directory exists
-    if not design1_path.exists():
+    # Check if map_explorer directory exists
+    if not map_module_path.exists():
         import streamlit as st
-        show_directory_not_found_error(design1_path, ["config_data.py", "geo_utils.py", "charts.py", "events.py"])
+        show_directory_not_found_error(map_module_path, ["config_data.py", "geo_utils.py", "charts.py", "events.py"])
 
         st.stop()
     
     # Check if required files exist
     required_files = [
-        design1_path / "config_data.py",
-        design1_path / "geo_utils.py",
-        design1_path / "charts.py",
-        design1_path / "events.py",
+        map_module_path / "config_data.py",
+        map_module_path / "geo_utils.py",
+        map_module_path / "charts.py",
+        map_module_path / "events.py",
     ]
     
     missing_files = [f for f in required_files if not f.exists()]
@@ -35,14 +35,13 @@ try:
         st.stop()
 
     # Remove other design directories from sys.path to avoid conflicts
-    story_path = project_root / "story"
-    design2_path = project_root / "trend_comparison"
-    design3_path = project_root / "affordability_finder"
+    narrative_path = project_root / "narrative"
+    narrative_path = project_root / "narrative"
+    afford_module_path = project_root / "affordability_finder"
 
-    # Remove conflicting paths if they exist
-    paths_to_remove = [story_path, design2_path, design3_path]
+    paths_to_remove = [narrative_path, afford_module_path]
     from utils.path_utils import add_to_path
-    add_to_path(design1_path, remove_others=paths_to_remove)
+    add_to_path(map_module_path, remove_others=paths_to_remove)
 
     import streamlit as st
     import pandas as pd
@@ -54,16 +53,16 @@ try:
     modules_to_clear = ['config_data', 'geo_utils', 'charts', 'events']
     clear_module_cache(modules_to_clear)
     
-    # Import from design1 directory using file paths to avoid conflicts
+    # Import map_explorer modules by file path to avoid conflicts
     # Import in dependency order: config_data and geo_utils first, then charts and events
-    config_data = import_from_path('config_data', design1_path / 'config_data.py')
-    geo_utils = import_from_path('geo_utils', design1_path / 'geo_utils.py')
+    config_data = import_from_path('config_data', map_module_path / 'config_data.py')
+    geo_utils = import_from_path('geo_utils', map_module_path / 'geo_utils.py')
     # Now load charts and events (they depend on config_data and geo_utils)
     # Make sure config_data and geo_utils are in sys.modules so charts can import them
     sys.modules['config_data'] = config_data
     sys.modules['geo_utils'] = geo_utils
-    charts_module = import_from_path('charts', design1_path / 'charts.py')
-    events_module = import_from_path('events', design1_path / 'events.py')
+    charts_module = import_from_path('charts', map_module_path / 'charts.py')
+    events_module = import_from_path('events', map_module_path / 'events.py')
     
     # Import what we need directly from the loaded modules
     get_dynamic_css = config_data.get_dynamic_css
@@ -120,13 +119,13 @@ try:
     # =========================================================================
     # 3. Session state init (with page-specific keys to avoid conflicts)
     # =========================================================================
-    design1_prefix = "design1_"
-    if f"{design1_prefix}view_mode" not in st.session_state:
-        st.session_state[f"{design1_prefix}view_mode"] = "city"
-    if f"{design1_prefix}selected_city" not in st.session_state:
-        st.session_state[f"{design1_prefix}selected_city"] = None
-    if f"{design1_prefix}selected_zip" not in st.session_state:
-        st.session_state[f"{design1_prefix}selected_zip"] = None
+    map_prefix = "map_"
+    if f"{map_prefix}view_mode" not in st.session_state:
+        st.session_state[f"{map_prefix}view_mode"] = "city"
+    if f"{map_prefix}selected_city" not in st.session_state:
+        st.session_state[f"{map_prefix}selected_city"] = None
+    if f"{map_prefix}selected_zip" not in st.session_state:
+        st.session_state[f"{map_prefix}selected_zip"] = None
 
     # =========================================================================
     # 4. Load data
@@ -240,7 +239,7 @@ try:
     st.caption(f"Year: **{selected_year}** · Metric: **{metric_type}**")
 
     with control_col3:
-        if st.session_state[f"{design1_prefix}view_mode"] == "city":
+        if st.session_state[f"{map_prefix}view_mode"] == "city":
             st.markdown("**🔍 Quick Metro Search**")
             df_filtered_sidebar = df_all[df_all["year"] == selected_year].copy()
             if not df_filtered_sidebar.empty:
@@ -267,10 +266,10 @@ try:
                     city_match = (
                         df_city_sidebar[df_city_sidebar["city_full"] == selected_metro]["city"].iloc[0]
                     )
-                    if st.session_state.get(f"{design1_prefix}selected_city") != city_match:
-                        st.session_state[f"{design1_prefix}selected_city"] = city_match
-                        st.session_state[f"{design1_prefix}view_mode"] = "zip"
-                        st.session_state[f"{design1_prefix}selected_zip"] = None
+                    if st.session_state.get(f"{map_prefix}selected_city") != city_match:
+                        st.session_state[f"{map_prefix}selected_city"] = city_match
+                        st.session_state[f"{map_prefix}view_mode"] = "zip"
+                        st.session_state[f"{map_prefix}selected_zip"] = None
                         st.rerun()
 
     st.markdown("---")
@@ -346,15 +345,15 @@ try:
     metro_yoy = get_metro_yoy(df_all, selected_year, metric_type)
 
     current_metro_name = None
-    if st.session_state[f"{design1_prefix}selected_city"]:
-        row_sel = df_city_map[df_city_map["city"] == st.session_state[f"{design1_prefix}selected_city"]]
+    if st.session_state[f"{map_prefix}selected_city"]:
+        row_sel = df_city_map[df_city_map["city"] == st.session_state[f"{map_prefix}selected_city"]]
         if not row_sel.empty:
             current_metro_name = row_sel["city_full"].iloc[0]
 
     # =========================================================================
     # 9. Main view (metro / zip)
     # =========================================================================
-    if st.session_state[f"{design1_prefix}view_mode"] == "city":
+    if st.session_state[f"{map_prefix}view_mode"] == "city":
         # --------------------- METRO VIEW ---------------------
         st.info(
             f"📍 **Metro View ({selected_year}) · {metric_type}**  · "
@@ -495,16 +494,16 @@ try:
             
             if clicked_city:
                 # Only update if different from current selection to avoid unnecessary reruns
-                current_city = st.session_state.get(f"{design1_prefix}selected_city")
+                current_city = st.session_state.get(f"{map_prefix}selected_city")
                 if current_city != clicked_city:
-                    st.session_state[f"{design1_prefix}selected_city"] = clicked_city
-                    st.session_state[f"{design1_prefix}selected_zip"] = None
-                    st.session_state[f"{design1_prefix}view_mode"] = "zip"
+                    st.session_state[f"{map_prefix}selected_city"] = clicked_city
+                    st.session_state[f"{map_prefix}selected_zip"] = None
+                    st.session_state[f"{map_prefix}view_mode"] = "zip"
                     st.rerun()
 
     else:
         # --------------------- ZIP VIEW ---------------------
-        selected_city = st.session_state[f"{design1_prefix}selected_city"]
+        selected_city = st.session_state[f"{map_prefix}selected_city"]
         if not selected_city:
             st.warning("⚠️ **No Metro Selected**")
             st.info("Please use the 'Quick Metro Search' in the control panel above to select a metro area, or click on a metro on the map.")
@@ -513,9 +512,9 @@ try:
         st.markdown(f"### 🗺️ `USA` → `{current_metro_name or selected_city}` → `ZIP Codes`")
         
         if st.button("⬅️ Back to All Metros", use_container_width=False):
-            st.session_state[f"{design1_prefix}view_mode"] = "city"
-            st.session_state[f"{design1_prefix}selected_city"] = None
-            st.session_state[f"{design1_prefix}selected_zip"] = None
+            st.session_state[f"{map_prefix}view_mode"] = "city"
+            st.session_state[f"{map_prefix}selected_city"] = None
+            st.session_state[f"{map_prefix}selected_zip"] = None
             st.rerun()
         
         st.markdown("---")
@@ -578,18 +577,18 @@ try:
                 zip_df_city = compute_rankings(zip_df_city, "metric_value", "zip_code_str")
 
                 # Get currently selected ZIP
-                current_selected_zip = st.session_state.get(f"{design1_prefix}selected_zip")
+                current_selected_zip = st.session_state.get(f"{map_prefix}selected_zip")
                 
                 # Validate and update selected ZIP
                 # If no ZIP is selected, or the selected ZIP doesn't exist in current year's data,
                 # select the first available ZIP
                 if current_selected_zip is None:
                     if not zip_df_city.empty:
-                        st.session_state[f"{design1_prefix}selected_zip"] = zip_df_city["zip_code_str"].iloc[0]
+                        st.session_state[f"{map_prefix}selected_zip"] = zip_df_city["zip_code_str"].iloc[0]
                 elif current_selected_zip not in zip_df_city["zip_code_str"].values:
                     # Selected ZIP doesn't exist in current year, select first available
                     if not zip_df_city.empty:
-                        st.session_state[f"{design1_prefix}selected_zip"] = zip_df_city["zip_code_str"].iloc[0]
+                        st.session_state[f"{map_prefix}selected_zip"] = zip_df_city["zip_code_str"].iloc[0]
                 # Otherwise, keep the previously selected ZIP (it exists in current year's data)
 
                 col_map, col_detail = st.columns([2, 1.2])
@@ -618,15 +617,15 @@ try:
                         
                         # If a new ZIP was clicked, update session state immediately
                         if clicked_zip:
-                            current_zip = st.session_state.get(f"{design1_prefix}selected_zip")
+                            current_zip = st.session_state.get(f"{map_prefix}selected_zip")
                             if clicked_zip != current_zip and clicked_zip in zip_df_city["zip_code_str"].values:
                                 # Update session state immediately
                                 # The rerun from on_select will use this updated value
-                                st.session_state[f"{design1_prefix}selected_zip"] = clicked_zip
+                                st.session_state[f"{map_prefix}selected_zip"] = clicked_zip
 
                 with col_detail:
                     st.subheader("📋 ZIP Details")
-                    active_zip = st.session_state.get(f"{design1_prefix}selected_zip")
+                    active_zip = st.session_state.get(f"{map_prefix}selected_zip")
                     if not active_zip:
                         st.info("👈 Click any ZIP on the map")
                     else:

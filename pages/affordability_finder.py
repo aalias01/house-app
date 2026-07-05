@@ -5,11 +5,11 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from utils.path_utils import setup_design_path, add_to_path
+from utils.path_utils import get_module_path, add_to_path, get_metro_boundaries_dir
 
 # Setup affordability_finder path
-design3_path, _ = setup_design_path("affordability_finder")
-add_to_path(design3_path)
+afford_module_path, _ = get_module_path("affordability_finder")
+add_to_path(afford_module_path)
 
 try:
     import streamlit as st
@@ -37,7 +37,6 @@ try:
         AFFORDABILITY_CATEGORIES,
         AFFORDABILITY_COLORS,
         classify_affordability,
-        make_zip_view_data,
     )
     from ui_components import income_control_panel, persona_income_slider, render_affordability_summary_card
 
@@ -570,7 +569,7 @@ try:
                         
                         df_zip_map["color_value"] = df_zip_map["color_value"].clip(0, 1)
 
-                        geojson_path = design3_path / "city_geojson" / f"{city_clicked}.geojson"
+                        geojson_path = get_metro_boundaries_dir() / f"{city_clicked}.geojson"
 
                         if not geojson_path.exists():
                             if should_trigger_spinner: loading_message_placeholder.empty()

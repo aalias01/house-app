@@ -1,64 +1,24 @@
-# config_data.py
-"""
-Central place for:
-- Global constants (tables, shapefiles, map settings)
-- Theme/CSS
-- Colorscales
-- Data loading (Databricks or local files)
-- Metric utilities: PTI, rankings, YoY
+"""Constants, theme CSS, and data loading for the map explorer module."""
 
-If you want to switch from Databricks to local CSV/Parquet later,
-you only need to modify:
-  - USE_LOCAL_DATA flag
-  - _load_all_data_local() function
-"""
-
-import os
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import streamlit as st
 
-# Get the absolute path to the map_explorer directory (where this module is located)
-_DESIGN1_DIR = Path(__file__).parent.resolve()
+from utils.path_utils import get_geo_dir, get_metro_aggregates_path
 
-# Only needed if you still use Databricks
-#from databricks import sql
-#from databricks.sdk.core import Config
+MAP_EXPLORER_DIR = Path(__file__).parent.resolve()
 
-# ============================================================
-# 1. Global flags
-# ============================================================
+CBSA_SHP_PATH = str(get_geo_dir() / "cb_2018_us_cbsa_500k.shp")
+ZCTA_SHP_PATH = str(get_geo_dir() / "cb_2018_us_zcta510_500k.shp")
+CBSA_ZIP_PATH = str(get_geo_dir() / "cbsa_shapes.zip")
+ZCTA_ZIP_PATH = str(get_geo_dir() / "zcta_shapes.zip")
 
-# Set this to True when you want to load data from local files
-# instead of from Databricks.
-USE_LOCAL_DATA = True
-
-# Local file paths (you can change these later)
-LOCAL_HOUSE_FILE = "data/house_ts_agg.csv"   # or .csv
-#LOCAL_ZIP_GEO_FILE = "data/zip_geo.parquet"      # or .csv
-
-# ============================================================
-# 2. Constants: tables, shapefiles, map settings
-# ============================================================
-
-# Databricks tables (only used when USE_LOCAL_DATA = False)
-HOUSE_TABLE = "workspace.data511.house_ts"
-ZIP_GEO_TABLE = "workspace.data511.zip_geo"
-
-# Shapefile paths
-CBSA_SHP_PATH = "data/cb_2018_us_cbsa_500k.shp"
-ZCTA_SHP_PATH = "data/cb_2018_us_zcta510_500k.shp"
-CBSA_ZIP_PATH = "data/cbsa_shapes.zip"
-ZCTA_ZIP_PATH = "data/zcta_shapes.zip"
-
-
-# Map center & zoom
 US_CENTER_LAT = 39.8283
 US_CENTER_LON = -98.5795
 US_ZOOM_LEVEL = 3.8
 
-# Map bounds to keep users within the U.S. region when panning
 US_BOUNDS = {
     "west": -130,
     "east": -65,
@@ -66,14 +26,10 @@ US_BOUNDS = {
     "north": 52,
 }
 
-# Manual mapping for special metros → CBSA.NAME (keys are lowercase)
 MANUAL_CBSA_NAME_MAP = {
     "dc_metro": "Washington-Arlington-Alexandria, DC-VA-MD-WV",
 }
 
-# ============================================================
-# 3. Theme CSS & colorscales
-# ============================================================
 
 def get_dynamic_css(is_dark_mode: bool) -> str:
     """Generate CSS based on current theme (light / dark)."""
@@ -100,7 +56,6 @@ def get_dynamic_css(is_dark_mode: bool) -> str:
         .stSelectbox > div > div {
             border-radius: 8px;
         }
-        /* Force Plotly axis labels to be visible in dark mode */
         .js-plotly-plot .xtitle, .js-plotly-plot .ytitle {
             fill: #ffffff !important;
             color: #ffffff !important;
@@ -111,8 +66,7 @@ def get_dynamic_css(is_dark_mode: bool) -> str:
         }
         </style>
         """
-    else:
-        return """
+    return """
         <style>
         #MainMenu {visibility: hidden;}
         .modebar {display: none !important;}
@@ -138,65 +92,28 @@ def get_dynamic_css(is_dark_mode: bool) -> str:
         </style>
         """
 
+
 def get_colorscale(metric_type: str, is_dark_mode: bool = False):
-    """
-    Return a colorscale for the given metric.
-    PTI: Green → amber → orange → red → dark red
-    Median Sale Price: Green → red gradient
-    """
+    """Return a colorscale for PTI or median sale price."""
     if "PTI" in metric_type:
-        # Green → amber → orange → red → dark red
         return [
-            [0.0, "#dcfce7"],   # light green
-            [0.25, "#22c55e"],  # green
-            [0.5, "#f59e0b"],   # amber
-            [0.75, "#f97316"],  # orange
-            [1.0, "#991b1b"],   # dark red
+            [0.0, "#dcfce7"],
+            [0.25, "#22c55e"],
+            [0.5, "#f59e0b"],
+            [0.75, "#f97316"],
+            [1.0, "#991b1b"],
         ]
-    else:
-        # Green → red gradient
-        return [
-            [0.0, "#dcfce7"],   # light green
-            [0.25, "#4ade80"],  # medium green
-            [0.5, "#fbbf24"],   # yellow/amber (midpoint)
-            [0.75, "#f87171"],  # light red
-            [1.0, "#dc2626"],   # red
-        ]
+    return [
+        [0.0, "#dcfce7"],
+        [0.25, "#4ade80"],
+        [0.5, "#fbbf24"],
+        [0.75, "#f87171"],
+        [1.0, "#dc2626"],
+    ]
 
-# ============================================================
-# 4. Databricks SQL helper (only used when USE_LOCAL_DATA = False)
-# ============================================================
-
-def _sql_query(query: str) -> pd.DataFrame:
-    """Execute SQL query against Databricks SQL warehouse."""
-    warehouse_id = os.getenv("DATABRICKS_WAREHOUSE_ID")
-    if not warehouse_id:
-        raise RuntimeError("DATABRICKS_WAREHOUSE_ID is not configured")
-
-    cfg = Config()
-    with sql.connect(
-        server_hostname=cfg.host,
-        http_path=f"/sql/1.0/warehouses/{warehouse_id}",
-        credentials_provider=lambda: cfg.authenticate,
-    ) as conn:
-        with conn.cursor() as cursor:
-            cursor.execute(query)
-            return cursor.fetchall_arrow().to_pandas()
-
-# ============================================================
-# 5. Data loading (Databricks vs local)
-# ============================================================
 
 def _standardize_house_df(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Apply common cleaning and derived columns:
-      - zip_code_str
-      - city_clean
-      - ensure numeric types
-    This function expects columns:
-      city, city_full, zip_code, year,
-      median_sale_price, per_capita_income, lat, lon
-    """
+    """Clean and type the metro map aggregate dataset."""
     df = df.copy()
     df["zip_code"] = df["zip_code"].astype("Int64")
     df["zip_code_str"] = (
@@ -210,144 +127,46 @@ def _standardize_house_df(df: pd.DataFrame) -> pd.DataFrame:
     df["per_capita_income"] = pd.to_numeric(df["per_capita_income"], errors="coerce")
     return df
 
-def _load_all_data_databricks() -> pd.DataFrame:
-    """
-    Original implementation: query Databricks and aggregate
-    to city/zip/year level.
-    """
-    query = f"""
-        SELECT
-            h.city,
-            h.city_full,
-            h.zip_code,
-            h.year,
-            AVG(h.median_sale_price) AS median_sale_price,
-            AVG(h.per_capita_income) AS per_capita_income,
-            AVG(g.lat) AS lat,
-            AVG(g.lon) AS lon
-        FROM {HOUSE_TABLE} h
-        LEFT JOIN {ZIP_GEO_TABLE} g
-          ON CAST(h.zip_code AS INT) = CAST(g.zip_code AS INT)
-        WHERE h.median_sale_price IS NOT NULL
-          AND h.median_sale_price > 0
-        GROUP BY
-            h.city, h.city_full, h.zip_code, h.year
-    """
-    raw = _sql_query(query)
-    return _standardize_house_df(raw)
 
 def _load_all_data_local() -> pd.DataFrame:
-    """
-    Local loading version.
-
-    You can customize this function later, e.g.:
-      - read from a single aggregated Parquet file
-      - or read house + zip_geo and join them
-
-    For now, this uses a simple "one aggregated file" approach.
-    Make sure LOCAL_HOUSE_FILE contains the columns:
-        city, city_full, zip_code, year,
-        median_sale_price, per_capita_income, lat, lon
-    """
-    # Convert relative path to absolute path
-    house_file_path = LOCAL_HOUSE_FILE
-    if not Path(house_file_path).is_absolute():
-        house_file_path = str(_DESIGN1_DIR / LOCAL_HOUSE_FILE)
-
-    if house_file_path.lower().endswith(".parquet"):
-        house = pd.read_parquet(house_file_path)
-    else:
-        house = pd.read_csv(house_file_path)
-
-    # If you prefer to also read zip_geo and join:
-    # if LOCAL_ZIP_GEO_FILE:
-    #     if LOCAL_ZIP_GEO_FILE.lower().endswith(".parquet"):
-    #         zip_geo = pd.read_parquet(LOCAL_ZIP_GEO_FILE)
-    #     else:
-#         zip_geo = pd.read_csv(LOCAL_ZIP_GEO_FILE)
-#     zip_geo = zip_geo[["zip_code", "lat", "lon"]].drop_duplicates()
-#     house = house.merge(zip_geo, on="zip_code", how="left")
-
+    """Load the pre-aggregated metro map CSV."""
+    house = pd.read_csv(get_metro_aggregates_path())
     return _standardize_house_df(house)
 
-@st.cache_data(show_spinner="📊 Loading housing data...", ttl=3600, max_entries=1)
+
+@st.cache_data(show_spinner="Loading housing data...", ttl=3600, max_entries=1)
 def load_all_data() -> pd.DataFrame:
-    """
-    Public data loading function used by app.py.
+    """Load housing data for the map explorer."""
+    return _load_all_data_local()
 
-    It chooses Databricks or local implementation based on
-    USE_LOCAL_DATA flag above.
-
-    - When USE_LOCAL_DATA = False:
-        data are loaded from Databricks via SQL
-    - When USE_LOCAL_DATA = True:
-        data are loaded from local files
-    """
-    if USE_LOCAL_DATA:
-        df = _load_all_data_local()
-    else:
-        df = _load_all_data_databricks()
-    return df
-
-# ============================================================
-# 6. Metric utilities: PTI, rankings, YoY
-# ============================================================
 
 def compute_pti(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Compute Price-to-Income (PTI) ratio for all rows in the input DataFrame.
-    Filters out extreme values and rows with missing/invalid data.
-    
-    Formula: PTI = median_sale_price / (per_capita_income * 2.54)
-    where 2.54 is the median household size (2019 to 2023).
-
-    Expects columns:
-        median_sale_price, per_capita_income
-    """
-    MEDIAN_HOUSEHOLD_SIZE = 2.54
+    """Compute price-to-income ratio for each row."""
+    median_household_size = 2.54
     df = df[
         df["median_sale_price"].notna()
         & df["per_capita_income"].notna()
         & (df["median_sale_price"] > 0)
         & (df["per_capita_income"] >= 5000)
     ].copy()
-    df["PTI"] = df["median_sale_price"] / (df["per_capita_income"] * MEDIAN_HOUSEHOLD_SIZE)
+    df["PTI"] = df["median_sale_price"] / (df["per_capita_income"] * median_household_size)
     df.loc[(df["PTI"] < 0.5) | (df["PTI"] > 50), "PTI"] = np.nan
-    df = df[df["PTI"].notna()].copy()
-    return df
+    return df[df["PTI"].notna()].copy()
+
 
 def compute_rankings(df: pd.DataFrame, value_col: str, id_col: str) -> pd.DataFrame:
-    """
-    Add rank, rank_total, and percentile columns based on value_col.
-    Higher values get better ranks (1 = highest).
-
-    - value_col: numeric column to rank by
-    - id_col: identifier column (city, ZIP, etc.), not used directly but
-              helpful for semantic clarity
-    """
+    """Add rank and percentile columns."""
     df = df.copy()
     df["rank"] = df[value_col].rank(ascending=False, method="min").astype(int)
     df["rank_total"] = len(df)
     df["percentile"] = ((df["rank_total"] - df["rank"] + 1) / df["rank_total"] * 100).round(1)
     return df
 
+
 def compute_yoy(
     df_all: pd.DataFrame, current_year: int, group_cols: list, value_col: str
 ) -> pd.DataFrame:
-    """
-    Compute year-over-year change and percent change for each group in group_cols.
-
-    Parameters
-    ----------
-    df_all : DataFrame
-        Full dataset across all years.
-    current_year : int
-        The year you want to compare against previous year.
-    group_cols : list
-        Columns that define each group (e.g. ["city", "city_full"]).
-    value_col : str
-        Numeric column used for YoY comparison.
-    """
+    """Compute year-over-year change for each group."""
     prev_year = current_year - 1
     df_current = df_all[df_all["year"] == current_year].copy()
     df_prev = df_all[df_all["year"] == prev_year].copy()
@@ -370,16 +189,10 @@ def compute_yoy(
     merged["yoy_pct"] = (merged["yoy_change"] / merged[f"{value_col}_prev"] * 100).round(1)
     return merged
 
+
 @st.cache_data(ttl=3600, max_entries=10)
 def get_metro_yoy(df_all_input: pd.DataFrame, current_year: int, metric_type_input: str) -> pd.DataFrame:
-    """
-    Cached helper to compute metro-level year-over-year changes
-    for either PTI or median sale price.
-
-    metric_type_input should be one of:
-        - "Price-to-Income Ratio (PTI)"
-        - "Median Sale Price"
-    """
+    """Compute metro-level year-over-year changes."""
     df_all_local = df_all_input.copy()
     if metric_type_input == "Price-to-Income Ratio (PTI)":
         df_processed = compute_pti(df_all_local)

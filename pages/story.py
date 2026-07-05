@@ -2,29 +2,28 @@ import sys
 import os
 from pathlib import Path
 
-# Add story directory to Python path
+# Add narrative module to Python path
 project_root = Path(__file__).parent.parent
-story_path = project_root / "story"
+narrative_path = project_root / "narrative"
 
 # Remove any conflicting paths from sys.path first
 # This ensures we import from the correct directory
-if str(story_path) not in sys.path:
-    sys.path.insert(0, str(story_path))
+if str(narrative_path) not in sys.path:
+    sys.path.insert(0, str(narrative_path))
 
 # Remove other design directories from sys.path to avoid conflicts
-design1_path = project_root / "map_explorer"
-design2_path = project_root / "trend_comparison"
-design3_path = project_root / "affordability_finder"
+map_module_path = project_root / "map_explorer"
+afford_module_path = project_root / "affordability_finder"
 
 # Remove conflicting paths if they exist
-paths_to_remove = [str(design1_path), str(design2_path), str(design3_path)]
+paths_to_remove = [str(map_module_path), str(afford_module_path)]
 for path in paths_to_remove:
     if path in sys.path:
         sys.path.remove(path)
 
 # Ensure story path is first
-if sys.path[0] != str(story_path):
-    sys.path.insert(0, str(story_path))
+if sys.path[0] != str(narrative_path):
+    sys.path.insert(0, str(narrative_path))
 
 # Store original working directory but don't change it
 # Use absolute paths instead to avoid issues with os.chdir
@@ -60,12 +59,12 @@ try:
         spec.loader.exec_module(module)
         return module
     
-    # Import from story directory using file paths to avoid conflicts
+    # Import from narrative module using file paths to avoid conflicts
     # Import in dependency order: data_utils first, then charts (which depends on data_utils)
-    data_utils = import_from_path('data_utils', story_path / 'data_utils.py')
+    data_utils = import_from_path('data_utils', narrative_path / 'data_utils.py')
     # Make sure data_utils is in sys.modules so charts can import it
     sys.modules['data_utils'] = data_utils
-    charts_module = import_from_path('charts', story_path / 'charts.py')
+    charts_module = import_from_path('charts', narrative_path / 'charts.py')
     
     # Import what we need directly from the loaded modules
     load_raw_data = data_utils.load_raw_data
@@ -118,7 +117,7 @@ try:
     try:
         raw = load_raw_data()
         if raw.empty:
-            st.error("❌ **Data Loading Error**: The data file is empty. Please check that `story/data/HouseTS_reduced.csv` exists and contains data.")
+            st.error("❌ **Data Loading Error**: The data file is empty. Please check that `data/housets_zip_level.csv` exists and contains data.")
             st.stop()
         df = add_derived_columns(raw)
         comp = composite_series(df)
@@ -130,7 +129,7 @@ try:
         ❌ **Data File Not Found**
         
         Unable to load the required data file. Please ensure:
-        - The file `story/data/HouseTS_reduced.csv` exists
+        - The file `data/housets_zip_level.csv` exists
         - The file path is correct
         - File permissions are set correctly
         
