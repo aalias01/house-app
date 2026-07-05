@@ -2,7 +2,7 @@
 
 > ZIP-level price-to-income ratios across 30 U.S. metros, 2012 to 2023. Set your income and year to see where you can afford to live.
 
-**[Live demo](https://houseapp-i2uqriykdh9d6ui38wvwev.streamlit.app)**
+**[Live demo](https://house-app-msds2025.streamlit.app)**
 
 I built this in a DATA 511 group project, then refactored the repo for my portfolio: one data layer, clearer module names, and no leftover course scaffolding.
 

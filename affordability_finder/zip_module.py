@@ -4,7 +4,7 @@ import numpy as np
 import os
 import json
 import pgeocode
-from dataprep import RATIO_COL, RATIO_COL_ZIP, AFFORDABILITY_CATEGORIES 
+from dataprep import RATIO_COL, AFFORDABILITY_CATEGORIES 
 
 
 # Helper function (copied from dataprep.py)
